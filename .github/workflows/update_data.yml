@@ -1,0 +1,33 @@
+name: Update Yahoo Finance Data
+
+on:
+  schedule:
+    - cron: '0 14 * * 1-5'   # Tous les jours de semaine à 14h UTC (= 16h Paris, après clôture US partielle)
+  workflow_dispatch:           # Lancement manuel possible
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install yfinance pandas
+
+      - name: Run update script
+        run: python extract_yfinance.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add 10_entreprises_data.csv
+          git diff --staged --quiet || git commit -m "Mise à jour automatique des données - $(date +'%Y-%m-%d')"
+          git push
