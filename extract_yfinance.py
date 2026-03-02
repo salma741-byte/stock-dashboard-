@@ -3,58 +3,75 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime
+import os
 
 TICKERS = ["AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "BRK-B", "LLY", "AVGO", "TSLA"]
 CSV_FILE = "10_entreprises_data.csv"
-DATE_DEBUT = "2021-01-01"
 
-print(f" Téléchargement historique 2021 → {datetime.today().strftime('%Y-%m-%d')}")
-print(" Patiente ~2-3 minutes...\n")
+def fetch_today_data():
+    today = datetime.today().strftime("%Y-%m-%d")
+    print(f" Mise à jour quotidienne — {today}\n")
+    rows = []
 
-all_rows = []
+    for ticker in TICKERS:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="2d")
+            info = stock.info
 
-for ticker in TICKERS:
-    try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(start=DATE_DEBUT, end=datetime.today().strftime("%Y-%m-%d"))
-        info = stock.info
-        nom = info.get("longName", ticker)
+            if hist.empty:
+                print(f"  Pas de données pour {ticker}")
+                continue
 
-        if hist.empty:
-            print(f"  Pas de données pour {ticker}")
-            continue
-
-        for date, row in hist.iterrows():
-            ouverture = row["Open"]
-            cloture = row["Close"]
+            latest = hist.iloc[-1]
+            ouverture = latest["Open"]
+            cloture = latest["Close"]
             variation = round(((cloture - ouverture) / ouverture) * 100, 2) if ouverture != 0 else 0
 
-            all_rows.append({
-                "Date":          date.strftime("%Y-%m-%d"),
+            rows.append({
+                "Date":          today,
                 "Ticker":        ticker,
-                "Nom":           nom,
+                "Nom":           info.get("longName", ticker),
                 "Prix_Actuel":   round(cloture, 2),
                 "Ouverture":     round(ouverture, 2),
-                "Plus_Haut":     round(row["High"], 2),
-                "Plus_Bas":      round(row["Low"], 2),
-                "Volume":        int(row["Volume"]),
+                "Plus_Haut":     round(latest["High"], 2),
+                "Plus_Bas":      round(latest["Low"], 2),
+                "Volume":        int(latest["Volume"]),
                 "Market_Cap_B":  round(info.get("marketCap", 0) / 1e9, 2),
                 "PE_Ratio":      info.get("trailingPE", None),
                 "52W_High":      info.get("fiftyTwoWeekHigh", None),
                 "52W_Low":       info.get("fiftyTwoWeekLow", None),
                 "Variation_%":   variation,
             })
+            print(f" {ticker} — {round(cloture, 2)} USD  ({variation:+}%)")
 
-        print(f" {ticker} ({nom}) — {len(hist)} jours chargés")
+        except Exception as e:
+            print(f" Erreur pour {ticker}: {e}")
 
-    except Exception as e:
-        print(f" Erreur pour {ticker}: {e}")
+    return pd.DataFrame(rows)
 
-df = pd.DataFrame(all_rows)
-df = df.sort_values(["Date", "Ticker"]).reset_index(drop=True)
-df.to_csv(CSV_FILE, index=False)
+def update_csv(new_data):
+    today = new_data["Date"].iloc[0]
 
-print(f"\n TERMINÉ !")
-print(f" {len(df)} lignes enregistrées dans '{CSV_FILE}'")
-print(f" Du {df['Date'].min()} au {df['Date'].max()}")
-print(f"\n Maintenant upload '{CSV_FILE}' sur GitHub dans ton repo stock-dashboard")
+    if os.path.exists(CSV_FILE):
+        existing = pd.read_csv(CSV_FILE)
+        # Supprimer le jour actuel si déjà présent (évite les doublons)
+        existing = existing[existing["Date"] != today]
+        combined = pd.concat([existing, new_data], ignore_index=True)
+    else:
+        combined = new_data
+
+    combined = combined.sort_values(["Date", "Ticker"]).reset_index(drop=True)
+    combined.to_csv(CSV_FILE, index=False)
+
+    print(f"\n CSV mis à jour : {len(combined)} lignes totales")
+    print(f" Du {combined['Date'].min()} au {combined['Date'].max()}")
+
+if __name__ == "__main__":
+    print(f" GitHub Actions — {datetime.today().strftime('%Y-%m-%d %H:%M')}\n")
+    df = fetch_today_data()
+
+    if not df.empty:
+        update_csv(df)
+    else:
+        print(" Aucune donnée récupérée.")
