@@ -1,14 +1,17 @@
-name: Update Yahoo Finance Data
+name: Update Market Data Automation
 
 on:
   schedule:
-    - cron: '0 8 * * *'   # Tous les jours à 6h UTC
-  workflow_dispatch:       # Permet de le lancer manuellement
-  
+    - cron: '0 8 * * *'   # S'exécute tous les jours (vérifie l'heure selon ton besoin)
+  workflow_dispatch:       # Permet de le lancer manuellement pour tester
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write       # Autorisation cruciale pour modifier tes fichiers
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,6 +38,8 @@ jobs:
 
       - name: Commit and push changes
         run: |
-          git add 10_entreprises_data.csv
-          git diff --staged --quiet || git commit -m "Mise à jour automatique - $(date +'%Y-%m-%d')"
-          git push origin main
+          # On ajoute tes deux fichiers de données
+          git add 10_entreprises_data.csv 
+          
+          # On ne commit que s'il y a de nouvelles données (évite les erreurs)
+          git diff --staged --quiet || (git commit -m "Mise à jour automatique - $(date +'%Y-%m-%d')" && git push origin main)
