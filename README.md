@@ -2,7 +2,7 @@
 
 Tableau de bord interactif Power BI pour le suivi et l'analyse des 10 plus grandes entreprises du S&P 500, alimenté automatiquement par Yahoo Finance via GitHub Actions.
 
-Accéder au dashboard en ligne : https://app.powerbi.com/groups/me/reports/5e14554b-ba53-4889-a2e8-80dec5eb39ab/681a0ff062e54c50ea76?experience=power-bi
+Accéder au dashboard en ligne : https://app.powerbi.com/groups/me/reports/5e14554b-ba53-4889-a2e8-80dec5eb39ab/66d15b2381baddcab383?experience=power-bi
 
 ---
 
